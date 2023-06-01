@@ -1,0 +1,107 @@
+PARTE 1 – TRANSAÇÕES 
+
+Objetivo:  
+
+Neste desafio você irá lidar com transações para executar modificações na base de dados.
+Sendo assim, vamos relembrar como executar uma transação. 
+Primeiramente, é preciso desabilitar o autocommit do MySQL. 
+Caso contrário, cada instrução SQL executada será confirmada. 
+
+CODE 1
+
+Essa primeira transação pode ser executada sem utilizar outros recursos como procedures. 
+Dessa forma, você irá executar statements de consultas e modificações de dados persistidos no banco de dados via transações.  
+
+==============================================
+SET autocommit = {0 | 1}
+-- ou
+SET autocommit = {OFF | ON}
+
+START TRANSACTION
+
+COMMIT -- confirma transação
+ROLLBACK -- cancela transação
+===============================================
+-Transação com rollback
+
+START TRANSACTION;
+    DELETE FROM user; # apaga todos registros da tabela
+    SELECT * FROM user; # mostra tabela totalmente vazia
+    INSERT INTO user (is_active, created_date, name) VALUES (1, current_timestamp(), 'Alice Pereira');
+    SELECT * FROM user; # mostra tabela somente com 1 registro
+    
+    ROLLBACK; # desfaz a transação
+
+SELECT * FROM user; # mostra os dados normalmente, pois nada foi comitado.
+
+-Transação com commit
+
+START TRANSACTION;
+  DELETE FROM user; # apaga todos registros da tabela
+  SELECT * FROM user; # mostra tabela totalmente vazia
+  INSERT INTO user (is_active, created_date, name) VALUES (1, current_timestamp(), 'Alice Pereira');
+  SELECT * FROM user; # mostra tabela somente com 1 registro
+COMMIT; # confirma a transação
+
+SELECT * FROM user; # agora os dados foram apagados e apenas o registro de "Alice Pereira" é mostrado, pois a transação foi confirmada.
+
+===============================================
+
+CODE 2
+
+PARTE 2 - TRANSAÇÃO COM PROCEDURE 
+
+Você deverá criar outra transação, contudo, esta será definida dentro de uma procedure. 
+Neste caso, assim como no exemplo em aula, deverá haver uma verificação de erro. 
+Essa verificação irá acarretar um ROLLBACK, total ou parcial (SAVEPOINT). 
+
+==============================================
+Transação em Stored Procedure
+
+DELIMITER //
+CREATE PROCEDURE insere_user()
+BEGIN
+    DECLARE erro_sql TINYINT DEFAULT FALSE;
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET erro_sql = TRUE;
+    START TRANSACTION;
+        INSERT INTO user (is_active, created_date, name) VALUES (1, current_timestamp(), 'Alice Pereira');
+        INSERT INTO user (is_active, created_date, name) VALUES (1, current_timestamp(), 'Ana Marquez');
+        INSERT INTO user (is_active, created_date, name) VALUES (1, current_timestamp(), 'Marcos Oliveira');
+    
+        # Aqui há um erro que impedirá o COMMIT e provocará o ROLLBACK.
+        INSERT INTO user (is_active, created_date, name) VALUES ('ativo', current_timestamp(), 'Marcos Oliveira');
+    
+        IF erro_sql = FALSE THEN
+            COMMIT;
+            SELECT 'Transação efetivada com sucesso.' AS Resultado;
+        ELSE
+            ROLLBACK;
+            SELECT 'Erro na transação' AS Resultado;
+        END IF;
+END//
+DELIMITER ;
+==============================================
+CALL insere_user();
+==============================================
+
+CODE 3
+
+PARTE 3 – BACKUP E RECOVERY 
+
+Objetivo: 
+
+Neste etapa do desafio, você irá executar o backup do banco de dados e-commerce. Realize o backup e recovery do banco de dados; 
+
+    - Utilize o mysqdump para realizar o backup e recovery do banco de dados e-commerce; 
+
+        Para realizar o backup do banco ecommerce para o arquivo ecommerce.sql
+            mysqldump -u root -p ecommerce > /home/edsonyabiku/ecommerce.sql
+        Para realizar o restore do arquivo ecommerce.sql no banco ecommerce_backup
+            mysql -u root -p ecommerce_backup < /home/edsonyabiku/ecommerce.sql
+
+
+    - Realize o backup de diferentes bancos de dados e inseria os recursos como: procedures, eventos e outros. 
+            mysqldump --routines --events -u root -p --databases ecommerce oficina > /home/edsonyabiku/servidordb.sql
+
+    Adicione o arquivo de backup ao github juntamente com o script; 
+
